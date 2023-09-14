@@ -73,10 +73,19 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
+    # serializer_class = RecipeSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly, )
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = RecipeFilter
+
+    def get_serializer_class(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return RecipeSerializer
+        return CreateRecipeSerializer
+
+    def perform_create(self, serializer):
+        print(self.request.user)
+        return serializer.save(author=self.request.user)
 
     @action(methods=['POST', 'DELETE'], detail=True)
     def favorite(self, request, pk):
@@ -90,12 +99,4 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if not create:
             return Response({'errors': ALREADY_ADDED_TO_FAVORITES}, status=400)
         serializer = FavoriteSerializer(get_object_or_404(Recipe, id=pk))
-        return Response(serializer.data, status=201)
-
-    def create(self, request, *args, **kwargs):
-        print(self.request.data)
-        serializer = CreateRecipeSerializer(data=self.request.data)
-        serializer.is_valid(raise_exception=True)
-        print(self.request.user)
-        serializer.save(author=self.request.user)
         return Response(serializer.data, status=201)

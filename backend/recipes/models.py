@@ -70,7 +70,7 @@ class Recipe(models.Model):
     author = models.ForeignKey(
         User, on_delete=models.DO_NOTHING, verbose_name='Автор')
     ingredients = models.ManyToManyField(
-        CountIngredient, verbose_name='Ингредиенты')
+        CountIngredient, verbose_name='Ингредиенты', blank=True)
     name = models.CharField('Название', max_length=MAX_LENGTH)
     image = models.ImageField('Изображение', upload_to='recipe/')
     text = models.TextField('Описание')

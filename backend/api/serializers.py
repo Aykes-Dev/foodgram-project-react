@@ -130,6 +130,10 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         fields = (
             'name', 'ingredients', 'cooking_time', 'text', 'image', 'tags')
 
+    def create(self, validated_data):
+        print(validated_data)
+        return validated_data
+
 
 class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
