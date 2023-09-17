@@ -31,18 +31,19 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    CHOICES = (
-        ('кг', 'кг'),
-        ('г', 'г'),
-    )
     name = models.CharField('Название', max_length=MAX_LENGTH, )
     measurement_unit = models.CharField(
-        'Единица измерения', max_length=MAX_LENGTH, choices=CHOICES)
+        'Единица измерения', max_length=MAX_LENGTH)
 
     class Meta:
         ordering = ('name', )
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
+        default_related_name = 'ingredients'
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'measurement_unit'],
+                                    name='unique ingredient')
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -70,7 +71,7 @@ class Recipe(models.Model):
     author = models.ForeignKey(
         User, on_delete=models.DO_NOTHING, verbose_name='Автор')
     ingredients = models.ManyToManyField(
-        CountIngredient, verbose_name='Ингредиенты', blank=True)
+        CountIngredient, verbose_name='Ингредиенты')
     name = models.CharField('Название', max_length=MAX_LENGTH)
     image = models.ImageField('Изображение', upload_to='recipe/')
     text = models.TextField('Описание')
@@ -95,6 +96,24 @@ class Favorite(models.Model):
     class Meta:
         ordering = ('user', )
         default_related_name = 'favorite'
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранное'
+
+    def __str__(self) -> str:
+        return self.user.get_username() + ' ' + self.repice.name
+
+
+class ShoppingList(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name='Пользователь')
+    repice = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, verbose_name='Рецепт')
+
+    class Meta:
+        ordering = ('user', )
+        default_related_name = 'shopping_list'
+        verbose_name = 'Список покупок'
+        verbose_name_plural = 'Список покупок'
 
     def __str__(self) -> str:
         return self.user.get_username() + ' ' + self.repice.name
