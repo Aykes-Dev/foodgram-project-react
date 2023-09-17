@@ -96,8 +96,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def add_or_delete(self, model, message, request, pk, serializers):
         if request.method == 'DELETE':
             model.objects.get(
-                user=request.user, repice=get_object_or_404(Recipe, id=pk)
-                ).delete()
+                user=request.user, repice=get_object_or_404(
+                    Recipe, id=pk)).delete()
             return Response(status=204)
         recipe = get_object_or_404(Recipe, id=pk)
         _, create = model.objects.get_or_create(
