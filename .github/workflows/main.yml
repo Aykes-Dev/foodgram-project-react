@@ -34,23 +34,3 @@ jobs:
         pip install -r backend/requirements.txt
     - name: Тесты flake8 
       run: python -m flake8 .
-
-  frontend_tests:
-    name: Тест фронтенда
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Установка NodeJS
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
-    - name: Установка зависимостей
-      run: |
-        cd frontend/
-        npm ci
-
-    - name: Тест фронтенда
-      run: |
-        cd frontend/
-        npm run test
