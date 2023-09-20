@@ -1,9 +1,10 @@
 from django.contrib import admin
-from django.utils.html import format_html
 from django.contrib.auth.admin import Group
+from django.utils.html import format_html
 
 from recipes.models import (
     Tag, Ingredient, Recipe, CountIngredient, Favorite, ShoppingList, User)
+
 
 admin.site.unregister(Group)
 LENGT_INGREDIENTS = 50
