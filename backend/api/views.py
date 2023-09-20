@@ -129,10 +129,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(methods=['GET'], detail=False)
     def download_shopping_cart(self, request):
-        ingredients = CountIngredient.objects.filter(
-            recipe__shopping_list__user=request.user).values(
-                'ingredients__name', 'ingredients__measurement_unit').annotate(
-                    value=Sum('amount')).order_by('ingredients__name')
+        ingredients = CountIngredient.count_ingredient(request.user)
 
         return FileResponse(
             self.create_shopping_list(ingredients), content_type='text/plain')

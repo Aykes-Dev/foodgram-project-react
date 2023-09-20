@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Sum
 
 from recipes.validators import validate_username
 
@@ -120,6 +121,13 @@ class CountIngredient(models.Model):
 
     def __str__(self) -> str:
         return f'{self.recipe} : {self.ingredients} - {self.amount}'
+
+    @staticmethod
+    def count_ingredient(self, user):
+        return self.objects.filter(
+            recipe__shopping_list__user=user).values(
+                'ingredients__name', 'ingredients__measurement_unit').annotate(
+                    value=Sum('amount')).order_by('ingredients__name')
 
 
 class Recipe(models.Model):
