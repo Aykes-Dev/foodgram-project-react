@@ -1,4 +1,4 @@
-name: Kittygramm workflow
+name: Foofgram workflow
 on:
   push:
     branches:
