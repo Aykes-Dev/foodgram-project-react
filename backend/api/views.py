@@ -3,10 +3,10 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
 from djoser.views import UserViewSet
+
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
 from api.paginators import Pagination
 from api.serializers import (CreateRecipeSerializer, FavoriteSerializer,
                              FollowSerializator, IngredientSerializer,
@@ -36,7 +36,7 @@ class UserViewSet(UserViewSet):
             FollowSerializator(
                 self.paginate_queryset(
                     request.user.follower.all()), many=True
-                ).data)
+            ).data)
 
     @action(
         methods=['POST', 'DELETE'],

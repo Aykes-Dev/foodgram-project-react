@@ -50,7 +50,7 @@ class RecipeAdmin(admin.ModelAdmin):
     def ingredients_admin(self, recipe):
         if len(result := ', '.join(
             [item.ingredients.name for item in recipe.countingredient.all()])
-                ) > LENGT_INGREDIENTS:
+        ) > LENGT_INGREDIENTS:
             result = result[:LENGT_INGREDIENTS] + '...'
         return result
 
