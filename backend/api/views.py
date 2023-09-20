@@ -1,26 +1,25 @@
-from django.http import HttpResponse
 from django.db.models import Sum
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django_filters import rest_framework as filters
 from djoser.views import UserViewSet
-from rest_framework.response import Response
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
-from django_filters import rest_framework as filters
+from rest_framework.response import Response
 
-from api.paginators import PaginationForRecipe
-from api.serializers import (
-    FollowSerializator, IngredientSerializer, TagSerializer, UserSerializer,
-    RecipeSerializer, FavoriteSerializer, CreateRecipeSerializer,
-    RecipeForFollowwerSerializer)
-from recipes.custom_filters import RecipeFilter
-from recipes.models import (
-    Ingredient, Tag, Recipe, Favorite, ShoppingList, CountIngredient)
-from users.models import Follow, User
+from api.paginators import Pagination
+from api.serializers import (CreateRecipeSerializer, FavoriteSerializer,
+                             FollowSerializator, IngredientSerializer,
+                             RecipeForFollowwerSerializer, RecipeSerializer,
+                             TagSerializer, UserSerializer)
+from recipes.custom_filters import IngredientFilter, RecipeFilter, TagFilter
+from recipes.models import (CountIngredient, Favorite, Follow, Ingredient,
+                            Recipe, ShoppingList, Tag, User)
 
-ERROR_MESSAGE_SUBSCRIBE = 'Нельзя подписаться на себя.'
 ERROR_MESSAGE_NOT_SUBSCRIBE = 'Подписка не найдена.'
 ALREADY_ADDED_TO_FAVORITES = 'Рецепт уже добавлен в избранное.'
 ALREADY_ADDED_TO_SHOP_LIST = 'Рецепт уже добавлен в список покупок.'
+TEMPLATE_SHOP_LIST = '{0}: {1} {2} \n'
 
 
 class UserViewSet(UserViewSet):
@@ -36,7 +35,8 @@ class UserViewSet(UserViewSet):
         return self.get_paginated_response(
             FollowSerializator(
                 self.paginate_queryset(
-                    Follow.objects.filter(user=request.user)), many=True).data)
+                    request.user.follower.all()), many=True
+                ).data)
 
     @action(
         methods=['POST', 'DELETE'],
@@ -46,15 +46,12 @@ class UserViewSet(UserViewSet):
         following = get_object_or_404(User, pk=id)
         user = request.user
         if request.method == 'POST':
-            if user.id == following.id:
-                return Response(
-                    {'error': ERROR_MESSAGE_SUBSCRIBE}, status=400)
             return Response(
                 FollowSerializator(
                     Follow.objects.create(
                         user=user, following=following),
-                    context={'request': request}).data,
-                status=201
+                    context={'request': request}
+                ).data, status=201
             )
         follow = Follow.objects.filter(user=user, following=following)
         if follow.exists():
@@ -68,6 +65,8 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TagSerializer
     permission_classes = (permissions.AllowAny, )
     pagination_class = None
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = TagFilter
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -75,15 +74,16 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = IngredientSerializer
     permission_classes = (permissions.AllowAny, )
     pagination_class = None
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = IngredientFilter
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    # serializer_class = RecipeSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly, )
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = RecipeFilter
-    pagination_class = PaginationForRecipe
+    pagination_class = Pagination
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
@@ -94,12 +94,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return serializer.save(author=self.request.user)
 
     def add_or_delete(self, model, message, request, pk, serializers):
+        recipe = get_object_or_404(Recipe, id=pk)
         if request.method == 'DELETE':
             model.objects.get(
-                user=request.user, repice=get_object_or_404(
-                    Recipe, id=pk)).delete()
+                user=request.user, repice=recipe).delete()
             return Response(status=204)
-        recipe = get_object_or_404(Recipe, id=pk)
         _, create = model.objects.get_or_create(
             user=request.user, repice=recipe)
         if not create:
@@ -119,34 +118,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
             ShoppingList, ALREADY_ADDED_TO_SHOP_LIST, request, pk,
             RecipeForFollowwerSerializer)
 
-    """@action(methods=['POST', 'DELETE'], detail=True)
-    def favorite(self, request, pk):
-        if request.method == 'DELETE':
-            Favorite.objects.get(
-                user=request.user, repice=get_object_or_404(Recipe, id=pk)
-                ).delete()
-            return Response(status=204)
-        _, create = Favorite.objects.get_or_create(
-            user=request.user, repice=get_object_or_404(Recipe, id=pk))
-        if not create:
-            return Response({'errors': ALREADY_ADDED_TO_FAVORITES}, status=400)
-        serializer = FavoriteSerializer(get_object_or_404(Recipe, id=pk))
-        return Response(serializer.data, status=201)"""
-
-    """@action(methods=['POST', 'DELETE'], detail=True)
-    def shopping_cart(self, request, pk):
-        if request.method == 'DELETE':
-            ShoppingList.objects.get(
-                user=request.user, repice=get_object_or_404(Recipe, id=pk)
-                ).delete()
-            return Response(status=204)
-        _, create = ShoppingList.objects.get_or_create(
-            user=request.user, repice=get_object_or_404(Recipe, id=pk))
-        if not create:
-            return Response({'errors': ALREADY_ADDED_TO_SHOP_LIST}, status=400)
-        serializer = RecipeForFollowwerSerializer(
-            get_object_or_404(Recipe, id=pk))
-        return Response(serializer.data, status=201)"""
+    def create_shopping_list(self, ingredients):
+        result = ''
+        for ingredient in ingredients:
+            result += TEMPLATE_SHOP_LIST.format(
+                ingredient["ingredients__name"],
+                ingredient["ingredients__measurement_unit"],
+                ingredient["value"])
+        return result
 
     @action(methods=['GET'], detail=False)
     def download_shopping_cart(self, request):
@@ -154,16 +133,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipe__shopping_list__user=request.user).values(
                 'ingredients__name', 'ingredients__measurement_unit').annotate(
                     value=Sum('amount')).order_by('ingredients__name')
-        response = HttpResponse(
-            content_type='text/plain',
-            charset='utf-8',
-        )
-        response['Content-Disposition'] = (
-            'attachment; filename=shopping_list.txt')
-        for ingredient in ingredients:
-            print(ingredient)
-            response.write(
-                f"{ingredient['ingredients__name']}: "
-                f"{ingredient['value']} "
-                f"{ingredient['ingredients__measurement_unit']}.\n")
-        return response
+
+        return FileResponse(
+            self.create_shopping_list(ingredients), content_type='text/plain')

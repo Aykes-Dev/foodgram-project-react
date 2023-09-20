@@ -1,10 +1,12 @@
-from djoser.serializers import UserSerializer, UserCreateSerializer
+from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
-from recipes.models import (
-    Tag, Ingredient, Recipe, CountIngredient, Favorite, ShoppingList)
-from users.models import User, Follow
+from recipes.models import (CountIngredient, Favorite, Follow, Ingredient,
+                            Recipe, ShoppingList, Tag, User)
+
+
+ERROR_MESSAGE_COOKING_TIME = 'Время приготовления не может быть меньше 1 мин.'
 
 
 class UserSerializer(UserSerializer):
@@ -24,9 +26,18 @@ class UserSerializer(UserSerializer):
 
 
 class CreateUserSerializer(UserCreateSerializer):
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    email = serializers.CharField(required=True, max_length=256)
+
     class Meta:
         model = User
         fields = ('email', 'username', 'first_name', 'last_name', 'password')
+
+    def validate_email(self, email):
+        if not User.objects.filter(email=email).exists():
+            return email
+        raise serializers.ValidationError('Такой email уже сущевствует.')
 
 
 class FollowSerializator(serializers.ModelSerializer):
@@ -37,7 +48,7 @@ class FollowSerializator(serializers.ModelSerializer):
     last_name = serializers.ReadOnlyField(source='following.last_name')
     is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.ReadOnlyField(source='following.recipes.count')
 
     class Meta:
         model = Follow
@@ -50,12 +61,8 @@ class FollowSerializator(serializers.ModelSerializer):
             user=source.user, following=source.following).exists()
 
     def get_recipes(self, source):
-        recipes = Recipe.objects.filter(author=source.following)
-        serializer = RecipeForFollowwerSerializer(recipes, many=True)
-        return serializer.data
-
-    def get_recipes_count(self, source):
-        return Recipe.objects.filter(author=source.following).count()
+        return RecipeForFollowwerSerializer(
+            source.following.recipes.all(), many=True).data
 
 
 class RecipeForFollowwerSerializer(serializers.ModelSerializer):
@@ -106,19 +113,17 @@ class RecipeSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
-    def get_is_favorited(self, recipe):
+    def check(self, model, recipe):
         user = self.context['request'].user
         if not user.is_authenticated:
-            print("AnonymousUser")
             return False
-        return Favorite.objects.filter(user=user, repice=recipe).exists()
+        return model.objects.filter(user=user, repice=recipe).exists()
+
+    def get_is_favorited(self, recipe):
+        return self.check(model=Favorite, recipe=recipe)
 
     def get_is_in_shopping_cart(self, recipe):
-        user = self.context['request'].user
-        if not user.is_authenticated:
-            print("AnonymousUser")
-            return False
-        return ShoppingList.objects.filter(user=user, repice=recipe).exists()
+        return self.check(model=ShoppingList, recipe=recipe)
 
     class Meta:
         model = Recipe
@@ -138,28 +143,35 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         fields = (
             'name', 'ingredients', 'cooking_time', 'text', 'image', 'tags')
 
-    def create(self, validated_data):
-        tags = validated_data.pop('tags')
-        ingredients = validated_data.pop('ingredients')
-        recipe = Recipe.objects.create(**validated_data)
-        recipe.tags.set(tags)
+    def validate_cooking_time(self, cooking_time):
+        if cooking_time <= 0:
+            return serializers.ValidationError(ERROR_MESSAGE_COOKING_TIME)
+        return cooking_time
+
+    def create_ingredient(self, recipe, ingredients):
         for ingredient in ingredients:
             CountIngredient.objects.create(
                 recipe=recipe,
                 ingredients=Ingredient.objects.get(id=ingredient['id']),
                 amount=ingredient['amount'])
+
+    def pop_elements(self, data, pop_list):
+        return *[data.pop(value) for value in pop_list], data
+
+    def create(self, validated_data):
+        tags, ingredients, validated_data = self.pop_elements(
+            validated_data, ['tags', 'ingredients'])
+        recipe = Recipe.objects.create(**validated_data)
+        recipe.tags.set(tags)
+        self.create_ingredient(recipe=recipe, ingredients=ingredients)
         return recipe
 
     def update(self, instance, validated_data):
-        tags = validated_data.pop('tags')
-        ingredients = validated_data.pop('ingredients')
+        tags, ingredients, validated_data = self.pop_elements(
+            validated_data, ['tags', 'ingredients'])
         instance.tags.set(tags)
         CountIngredient.objects.filter(recipe=instance).delete()
-        for ingredient in ingredients:
-            CountIngredient.objects.create(
-                recipe=instance,
-                ingredients=Ingredient.objects.get(id=ingredient['id']),
-                amount=ingredient['amount'])
+        self.create_ingredient(recipe=instance, ingredients=ingredients)
 
         return super().update(instance, validated_data)
 

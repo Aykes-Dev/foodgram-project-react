@@ -3,8 +3,14 @@ version: '3.3'
 volumes:
   static:
   media:
+  pg_data:
 
 services:
+  db:
+    image: postgres:13
+    env_file: ./.env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
   frontend:
     build:
@@ -15,6 +21,9 @@ services:
       - static:/frontend_static
       - ../frontend/:/app/result_build/
   backend:
+    depends_on:
+      - db
+    env_file: ./.env
     build:
       context: ../backend
       dockerfile: Dockerfile
