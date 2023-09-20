@@ -2,7 +2,7 @@ name: Foofgram workflow
 on:
   push:
     branches:
-      - '*'
+      - dev
 
 jobs:
   tests_backend:
