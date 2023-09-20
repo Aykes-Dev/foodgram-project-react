@@ -31,4 +31,3 @@ gunicorn==20.1.0
 python-dotenv==1.0.0
 psycopg2==2.9.7
 flake8==6.0.0
-flake8-isort==6.0.0
