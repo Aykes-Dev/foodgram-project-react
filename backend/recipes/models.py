@@ -123,8 +123,8 @@ class CountIngredient(models.Model):
         return f'{self.recipe} : {self.ingredients} - {self.amount}'
 
     @staticmethod
-    def count_ingredient(self, user):
-        return self.objects.filter(
+    def count_ingredient(user):
+        return CountIngredient.objects.filter(
             recipe__shopping_list__user=user).values(
                 'ingredients__name', 'ingredients__measurement_unit').annotate(
                     value=Sum('amount')).order_by('ingredients__name')

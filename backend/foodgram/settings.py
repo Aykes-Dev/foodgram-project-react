@@ -1,8 +1,9 @@
+# flake8: noqa
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=Path('../infra/.env'))
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -77,7 +78,7 @@ else:
             'NAME': os.getenv('POSTGRES_DB', 'django'),
             'USER': os.getenv('POSTGRES_USER', 'django'),
             'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-            'HOST': os.getenv('DB_HOST', ''),
+            'HOST': os.getenv('DB_HOST', 'db'),
             'PORT': os.getenv('DB_PORT', 5432)
         }
     }
