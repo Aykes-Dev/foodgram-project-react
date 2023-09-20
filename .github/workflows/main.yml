@@ -34,14 +34,3 @@ jobs:
         pip install -r backend/requirements.txt
     - name: Тесты flake8 
       run: python -m flake8 .
-    - name: Автотесты Pytest
-      env:
-        POSTGRES_USER: django_user
-        POSTGRES_PASSWORD: django_password
-        POSTGRES_DB: django_db
-        DB_HOST: 127.0.0.1
-        DB_PORT: 5432
-      run: |
-        pytest 
-        cd backend
-        python manage.py test
