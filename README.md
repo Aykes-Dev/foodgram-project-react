@@ -60,7 +60,7 @@ sudo docker compose -f docker-compose.yml up -d
 ```
 sudo docker compose -f docker-compose.yml exec backend python manage.py migrate
 sudo docker compose -f docker-compose.yml exec backend python manage.py collectstatic
-sudo docker compose -f docker-compose.yml exec backend cp -r /app/collected_static/. /backend_static/static/ 
+sudo docker compose -f docker-compose.yml exec backend cp -r /app/static/. /app/backend_static/static/
 ```
 6. Загрузка тегов в БД
 ```

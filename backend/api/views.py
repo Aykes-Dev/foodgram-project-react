@@ -6,13 +6,13 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from api.paginators import Pagination
+from api.paginators import LimitPagination
 from api.serializers import (CreateRecipeSerializer, FavoriteSerializer,
                              FollowSerializator, IngredientSerializer,
                              RecipeForFollowwerSerializer, RecipeSerializer,
                              TagSerializer, UserSerializer)
-from recipes.custom_filters import IngredientFilter, RecipeFilter, TagFilter
-from recipes.models import (CountIngredient, Favorite, Follow, Ingredient,
+from recipes.filters import IngredientFilter, RecipeFilter, TagFilter
+from recipes.models import (Сomposition, Favorite, Follow, Ingredient,
                             Recipe, ShoppingList, Tag, User)
 
 
@@ -83,7 +83,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticatedOrReadOnly, )
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = RecipeFilter
-    pagination_class = Pagination
+    pagination_class = LimitPagination
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
@@ -119,17 +119,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
             RecipeForFollowwerSerializer)
 
     def create_shopping_list(self, ingredients):
-        result = ''
-        for ingredient in ingredients:
-            result += TEMPLATE_SHOP_LIST.format(
+        return ''.join(
+            TEMPLATE_SHOP_LIST.format(
                 ingredient["ingredients__name"],
                 ingredient["ingredients__measurement_unit"],
-                ingredient["value"])
-        return result
+                ingredient["value"]) for ingredient in ingredients)
 
     @action(methods=['GET'], detail=False)
     def download_shopping_cart(self, request):
-        ingredients = CountIngredient.count_ingredient(request.user)
-
         return FileResponse(
-            self.create_shopping_list(ingredients), content_type='text/plain')
+            self.create_shopping_list(
+                Сomposition.get_count_ingredients(request.user)
+            ), content_type='text/plain')
