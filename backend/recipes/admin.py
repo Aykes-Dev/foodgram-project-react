@@ -9,6 +9,7 @@ from recipes.models import (Favorite, Follow, Ingredient, Recipe, ShoppingList,
 admin.site.unregister(Group)
 LENGT_INGREDIENTS = 50
 IMAGE_STATUS = '<img src="/static/admin/img/icon-{}.svg">'
+IMAGE_STATUS = '<img src="{}" width="75px" heigth="75px">'
 
 
 @admin.register(Tag)
@@ -35,7 +36,8 @@ class IngredientAdmin(admin.ModelAdmin):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
-        'name', 'count', 'author', 'tags_admin', 'ingredients_admin')
+        'name', 'count', 'author', 'image_admin', 'tags_admin',
+        'ingredients_admin')
     list_filter = ('tags', )
     search_fields = ('author__username', 'name', 'tags__name')
 
@@ -55,6 +57,11 @@ class RecipeAdmin(admin.ModelAdmin):
             ''.join('<div>- {}</div>'.format(
                 item.ingredients.name) for item in recipe.composition.all()
             ))
+
+    @admin.display(description='Ингредиенты')
+    def image_admin(self, recipe):
+        a = recipe.image.url
+        return mark_safe(IMAGE_STATUS.format(a))
 
 
 @admin.register(Сomposition)
@@ -86,10 +93,7 @@ class UserAdmin(admin.ModelAdmin):
 
     @staticmethod
     def get_status_image(value):
-        return mark_safe(
-            IMAGE_STATUS.format(
-                'yes' if value > 0 else 'no'
-            ))
+        return mark_safe(IMAGE_STATUS.format('yes' if value > 0 else 'no'))
 
     @admin.display(description='Подписчики')
     def subscribers(self, user):
