@@ -1,15 +1,17 @@
+from collections import Counter
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
-from foodgram.settings import MAX_LENGTH_EMAIL
-from recipes.models import (Сomposition, Favorite, Follow, Ingredient,
+from recipes.models import (Composition, Favorite, Follow, Ingredient,
                             Recipe, ShoppingList, Tag, User)
 
 ERROR_MESSAGE_IMAGE = 'Изображение обязательное поле'
 ERROR_MESSAGE_TAGS = 'Нельзя указать два одинаковых тега: {}'
 RROR_MESSAGE_INGRESIENTS = 'Нельзя указать два одинаковых ингредиента: {}'
 DOES_NOT_EXISTS_INGREDIENT = 'Ингредиент не найден'
+NOT_FOUND_MESSAGE = 'Отсутствует: {}'
+LIST_EMPTY = 'Список {} не может быть пустым.'
 
 
 class UserSerializer(UserSerializer):
@@ -29,13 +31,10 @@ class UserSerializer(UserSerializer):
 
 
 class CreateUserSerializer(UserCreateSerializer):
-    first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
-    email = serializers.CharField(required=True, max_length=MAX_LENGTH_EMAIL)
-
     class Meta:
         model = User
-        fields = ('email', 'username', 'first_name', 'last_name', 'password')
+        fields = (
+            'email', 'id', 'username', 'first_name', 'last_name', 'password')
 
 
 class FollowSerializator(serializers.ModelSerializer):
@@ -90,7 +89,7 @@ class IngredientCountSerializer(serializers.ModelSerializer):
         source='ingredients.measurement_unit')
 
     class Meta:
-        model = Сomposition
+        model = Composition
         fields = ('id', 'name', 'measurement_unit', 'amount', )
 
 
@@ -99,7 +98,7 @@ class CreateIngredientCountSerializer(serializers.ModelSerializer):
     amount = serializers.IntegerField()
 
     class Meta:
-        model = Сomposition
+        model = Composition
         fields = ('id', 'amount', )
 
 
@@ -107,12 +106,13 @@ class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     author = UserSerializer(read_only=True)
     ingredients = IngredientCountSerializer(
-        many=True, read_only=True, source='composition')
+        many=True, read_only=True, source='compositions')
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
     def check(self, model, recipe):
-        user = self.context['request'].user
+        user = self.context.get('request').user
+
         if not user.is_authenticated:
             return False
         return model.objects.filter(user=user, repice=recipe).exists()
@@ -131,7 +131,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
-    image = Base64ImageField()
+    image = Base64ImageField(required=True)
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True)
     ingredients = CreateIngredientCountSerializer(many=True)
@@ -142,20 +142,24 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             'name', 'ingredients', 'cooking_time', 'text', 'image', 'tags')
 
     def validate_image(self, image):
-        if image is None:
+        if image == '' or image is None:
             return serializers.ValidationError(ERROR_MESSAGE_IMAGE)
         return image
 
     def validate_tags(self, tags):
-        items = []
-        for tag in tags:
-            if tag.id in items:
-                raise serializers.ValidationError(
-                    ERROR_MESSAGE_TAGS.format(tag))
-            items.append(tag.id)
+        if tags == []:
+            raise serializers.ValidationError(LIST_EMPTY.format('тегов'))
+        if (repeat := ' '.join(
+                tag.name for tag, count in Counter(tags).items() if count > 1
+        )):
+            raise serializers.ValidationError(
+                ERROR_MESSAGE_TAGS.format(repeat))
         return tags
 
     def validate_ingredients(self, ingredients):
+        if ingredients == []:
+            raise serializers.ValidationError(
+                LIST_EMPTY.format('ингредиентов'))
         items = []
         for ingredient in ingredients:
             if not Ingredient.objects.filter(id=ingredient['id']).exists():
@@ -169,14 +173,17 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def create_ingredient(recipe, ingredients):
-        Сomposition.objects.bulk_create(
-            [Сomposition(
+        Composition.objects.bulk_create(
+            Composition(
                 recipe=recipe,
                 ingredients=Ingredient.objects.get(id=ingredient['id']),
-                amount=ingredient['amount']) for ingredient in ingredients])
+                amount=ingredient['amount']) for ingredient in ingredients)
 
     @staticmethod
     def pop_elements(data, pop_list):
+        if (not_exists := [value for value in pop_list if value not in data]):
+            raise serializers.ValidationError(
+                NOT_FOUND_MESSAGE.format(not_exists))
         return *[data.pop(value) for value in pop_list], data
 
     def create(self, validated_data):
@@ -191,7 +198,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         tags, ingredients, validated_data = self.pop_elements(
             validated_data, ['tags', 'ingredients'])
         instance.tags.set(tags)
-        Сomposition.objects.filter(recipe=instance).delete()
+        Composition.objects.filter(recipe=instance).delete()
         self.create_ingredient(recipe=instance, ingredients=ingredients)
 
         return super().update(instance, validated_data)

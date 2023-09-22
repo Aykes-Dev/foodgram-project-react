@@ -100,18 +100,19 @@ class Ingredient(models.Model):
         return self.name
 
 
-class Сomposition(models.Model):
+class Composition(models.Model):
     recipe = models.ForeignKey(
         'Recipe', verbose_name='Рецепт', on_delete=models.CASCADE)
     ingredients = models.ForeignKey(
         Ingredient, verbose_name='Продукты', on_delete=models.CASCADE)
-    amount = models.PositiveSmallIntegerField('Мера')
+    amount = models.PositiveSmallIntegerField(
+        'Мера', validators=[MinValueValidator(1)])
 
     class Meta:
         ordering = ('recipe', )
         verbose_name = 'Мера продуктов'
-        verbose_name_plural = 'Мера продуктов'
-        default_related_name = 'composition'
+        verbose_name_plural = 'Меры продуктов'
+        default_related_name = 'compositions'
         constraints = [
             models.UniqueConstraint(fields=['recipe', 'ingredients'],
                                     name='unique count ingredient')
@@ -122,10 +123,16 @@ class Сomposition(models.Model):
 
     @staticmethod
     def get_count_ingredients(user):
-        return Сomposition.objects.filter(
-            recipe__shopping_list__user=user).values(
-                'ingredients__name', 'ingredients__measurement_unit').annotate(
-                    value=Sum('amount')).order_by('ingredients__name')
+        return Composition.objects.filter(
+            recipe__shopping_list__user=user
+        ).values(
+            'ingredients__name',
+            'ingredients__measurement_unit'
+        ).annotate(
+            value=Sum('amount')
+        ).order_by(
+            'ingredients__name'
+        )
 
 
 class Recipe(models.Model):
@@ -133,7 +140,7 @@ class Recipe(models.Model):
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name='Автор')
     ingredients = models.ManyToManyField(
-        Ingredient, verbose_name='Продукты', through=Сomposition)
+        Ingredient, verbose_name='Продукты', through=Composition)
     name = models.CharField('Название', max_length=MAX_LENGTH, unique=True)
     image = models.ImageField(
         'Изображение', upload_to='recipe/', blank=False, null=False)

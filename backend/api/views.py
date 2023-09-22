@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
@@ -12,19 +14,20 @@ from api.serializers import (CreateRecipeSerializer, FavoriteSerializer,
                              RecipeForFollowwerSerializer, RecipeSerializer,
                              TagSerializer, UserSerializer)
 from recipes.filters import IngredientFilter, RecipeFilter, TagFilter
-from recipes.models import (Сomposition, Favorite, Follow, Ingredient,
+from recipes.models import (Composition, Favorite, Follow, Ingredient,
                             Recipe, ShoppingList, Tag, User)
 
 
 ERROR_MESSAGE_NOT_SUBSCRIBE = 'Подписка не найдена.'
 ALREADY_ADDED_TO_FAVORITES = 'Рецепт уже добавлен в избранное.'
 ALREADY_ADDED_TO_SHOP_LIST = 'Рецепт уже добавлен в список покупок.'
-TEMPLATE_SHOP_LIST = '{0}: {1} {2} \n'
+TEMPLATE_SHOP_LIST = '{0}: {1} {2} '
 
 
 class UserViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    pagination_class = LimitPagination
 
     @action(
         methods=['GET'],
@@ -129,5 +132,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         return FileResponse(
             self.create_shopping_list(
-                Сomposition.get_count_ingredients(request.user)
-            ), content_type='text/plain')
+                Composition.get_count_ingredients(request.user)
+            ), content_type='text/plain',
+            filename=f'{date.today()}shopping_list.txt')

@@ -1,27 +1,25 @@
 from django.contrib import admin
 from django.contrib.auth.admin import Group
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
 
-from recipes.models import (Favorite, Follow, Ingredient, Recipe, ShoppingList,
-                            Tag, User, Сomposition)
+from recipes.models import (
+    Composition, Favorite, Follow, Ingredient, Recipe, ShoppingList, Tag, User)
 
 admin.site.unregister(Group)
 LENGT_INGREDIENTS = 50
-IMAGE_STATUS = '<img src="/static/admin/img/icon-{}.svg">'
-IMAGE_STATUS = '<img src="{}" width="75px" heigth="75px">'
+IMAGE_RECIPE = '<img src="{}" width="75px" heigth="75px">'
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', 'color', 'colored_name', 'slug')
+    list_display = ('name', 'color', 'get_color_html', 'slug')
     list_filter = ('name', )
     search_fields = ('name', )
 
     @admin.display(description='Пример цвета')
-    def colored_name(self, tag):
+    def get_color_html(self, tag):
         return format_html(
-            '<div style="background: {}; width: 20px; height: 20px"></div>',
+            '<span  style="background: {};">&nbsp&nbsp&nbsp&nbsp&nbsp</span>',
             tag.color
         )
 
@@ -33,38 +31,43 @@ class IngredientAdmin(admin.ModelAdmin):
     search_fields = ('name', 'measurement_unit')
 
 
+class IngredientInline(admin.TabularInline):
+    model = Composition
+    extra = 3
+    min_num = 1
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
-        'name', 'count', 'author', 'image_admin', 'tags_admin',
-        'ingredients_admin')
+        'name', 'get_count_in_favorite', 'author', 'get_image', 'get_tags',
+        'get_ingredients')
     list_filter = ('tags', )
     search_fields = ('author__username', 'name', 'tags__name')
+    inlines = (IngredientInline,)
 
     @admin.display(description='В избраном')
-    def count(self, recipe):
+    def get_count_in_favorite(self, recipe):
         return recipe.favorites.count()
 
     @admin.display(description='Теги')
-    def tags_admin(self, recipe):
+    def get_tags(self, recipe):
         return format_html(
-            ''.join('<div>- {}</div>'.format(
-                item.name) for item in recipe.tags.all()))
+            '<br>'.join(item.name for item in recipe.tags.all()))
 
     @admin.display(description='Ингредиенты')
-    def ingredients_admin(self, recipe):
+    def get_ingredients(self, recipe):
         return format_html(
-            ''.join('<div>- {}</div>'.format(
-                item.ingredients.name) for item in recipe.composition.all()
+            '<br>'.join(
+                item.ingredients.name for item in recipe.compositions.all()
             ))
 
-    @admin.display(description='Ингредиенты')
-    def image_admin(self, recipe):
-        a = recipe.image.url
-        return mark_safe(IMAGE_STATUS.format(a))
+    @admin.display(description='Изображение')
+    def get_image(self, recipe):
+        return format_html(IMAGE_RECIPE.format(recipe.image.url))
 
 
-@admin.register(Сomposition)
+@admin.register(Composition)
 class CountIngredientAdmin(admin.ModelAdmin):
     list_display = ('recipe', 'ingredients', 'amount')
     search_fields = ('recipe__name', )
@@ -83,36 +86,32 @@ class ShoppingListAdmin(admin.ModelAdmin):
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = (
-        'username', 'email', 'full_name', 'count_recipe', 'subscribers',
-        'subscriptions', 'is_staff')
+        'username', 'email', 'get_full_name', 'get_count_recipe',
+        'get_subscribers', 'get_subscriptions', 'is_staff')
     search_fields = ('username', 'email')
 
     @admin.display(description='Фамилия Имя')
-    def full_name(self, user):
+    def get_full_name(self, user):
         return f'{user.last_name} {user.first_name}'
 
-    @staticmethod
-    def get_status_image(value):
-        return mark_safe(IMAGE_STATUS.format('yes' if value > 0 else 'no'))
-
     @admin.display(description='Подписчики')
-    def subscribers(self, user):
-        return self.get_status_image(user.following.count())
+    def get_subscribers(self, user):
+        return user.following.count()
 
     @admin.display(description='Подписки')
-    def subscriptions(self, user):
-        return self.get_status_image(user.follower.count())
+    def get_subscriptions(self, user):
+        return user.follower.count()
 
     @admin.display(description='Число рецептов')
-    def count_recipe(self, user):
+    def get_count_recipe(self, user):
         return user.recipes.count()
 
 
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
-    list_display = ('follow', )
+    list_display = ('get_follow_title', )
     search_fields = ('user__username', 'following__username')
 
     @admin.display(description='Подписки')
-    def follow(self, follow, ):
+    def get_follow_title(self, follow, ):
         return f'{follow.user} подписан на {follow.following}'

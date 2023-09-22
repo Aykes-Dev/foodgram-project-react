@@ -7,7 +7,7 @@ from foodgram.settings import RESERVED_NAMES, USERNAME_PATTERN, COLOR_PATTERN
 
 UNAVAILABLE_NAME = 'Недоступное имя пользователя: {0}'
 UNACCEPTABLE_SYMBOLS = 'Запрещенные символы: {0}'
-ERROR_MESSAGE_COLOR = 'Введите цвет в форматe: #0000AA'
+ERROR_MESSAGE_COLOR = 'Введите цвет в форматe: #AABBCC'
 
 
 def validate_username(value):
