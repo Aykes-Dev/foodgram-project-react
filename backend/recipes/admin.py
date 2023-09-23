@@ -8,6 +8,7 @@ from recipes.models import (
 admin.site.unregister(Group)
 LENGT_INGREDIENTS = 50
 IMAGE_RECIPE = '<img src="{}" width="75px" heigth="75px">'
+COLOR_VIEW = '<span  style="background: {};">&nbsp&nbsp&nbsp&nbsp&nbsp</span>'
 
 
 @admin.register(Tag)
@@ -18,10 +19,7 @@ class TagAdmin(admin.ModelAdmin):
 
     @admin.display(description='Пример цвета')
     def get_color_html(self, tag):
-        return format_html(
-            '<span  style="background: {};">&nbsp&nbsp&nbsp&nbsp&nbsp</span>',
-            tag.color
-        )
+        return format_html(COLOR_VIEW, tag.color)
 
 
 @admin.register(Ingredient)
@@ -59,7 +57,10 @@ class RecipeAdmin(admin.ModelAdmin):
     def get_ingredients(self, recipe):
         return format_html(
             '<br>'.join(
-                item.ingredients.name for item in recipe.compositions.all()
+                f'{item.ingredients.name} '
+                f'{item.amount} '
+                f'{item.ingredients.measurement_unit}'
+                for item in recipe.compositions.all()
             ))
 
     @admin.display(description='Изображение')
@@ -114,4 +115,4 @@ class FollowAdmin(admin.ModelAdmin):
 
     @admin.display(description='Подписки')
     def get_follow_title(self, follow, ):
-        return f'{follow.user} подписан на {follow.following}'
+        return f'{follow.user.username} подписан на {follow.following}'

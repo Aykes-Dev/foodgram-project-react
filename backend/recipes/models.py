@@ -173,7 +173,7 @@ class UserRecipe(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f'{self.user.get_username()} добавил {self.repice.name}'
+        return f'{self.user.username} добавил {self.repice.name}'
 
 
 class Favorite(UserRecipe):
