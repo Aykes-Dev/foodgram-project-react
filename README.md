@@ -1,4 +1,4 @@
-
+[![Foodgram workflow](https://github.com/Aykes-Dev/foodgram-project-react/actions/workflows/main.yml/badge.svg)](https://github.com/Aykes-Dev/foodgram-project-react/actions/workflows/main.yml)
 # Foodgram
 ###
 Foodgram – инновационный веб-ресурс для публикации кулинарных рецептов. Это не просто сайт, это целое сообщество единомышленников, где каждый может поделиться своими уникальными кулинарными идеями и открытиями. Наша миссия - делать процесс приготовления пищи доступным, интересным и вдохновляющим для всех, независимо от уровня кулинарного мастерства.
