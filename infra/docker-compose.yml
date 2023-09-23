@@ -13,19 +13,14 @@ services:
       - pg_data:/var/lib/postgresql/data
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-    command: cp -r /app/build/. /frontend_static/
+    image: aykisdev/foodgram_frontend
     volumes:
       - ../frontend/:/app/result_build/
   backend:
     depends_on:
       - db
     env_file: ./.env
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
+    image: aykisdev/foodgram_backend
     volumes:
       - static:/app/backend_static
       - media:/app/media
@@ -35,7 +30,7 @@ services:
       - frontend
       - backend
     ports:
-      - "80:80"
+      - "9000:80"
     volumes:
       - static:/static/
       - media:/media/
