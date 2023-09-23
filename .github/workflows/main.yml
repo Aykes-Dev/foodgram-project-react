@@ -84,7 +84,7 @@ jobs:
           sudo docker compose -f docker-compose.yml exec backend python manage.py load_tags
           sudo docker compose -f docker-compose.yml exec backend python manage.py load_ingredients_json
   send_message:
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/master' }}
     name: Отправка сообщения в Телеграм
     runs-on: ubuntu-latest
     needs: deploy
