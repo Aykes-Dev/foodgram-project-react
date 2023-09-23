@@ -56,23 +56,33 @@ jobs:
       - build_and_push_to_docker_hub
       - build_frontend_and_push_to_docker_hub
     steps:
-      - name: Выполнение удаленных ssh-команд для развертывания
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-          script: |
-            cd infra
-            sudo docker compose -f docker-compose.yml pull
-            sudo docker compose -f docker-compose.yml down
-            sudo docker compose -f docker-compose.yml up -d
-            sudo docker compose -f docker-compose.yml exec backend python manage.py migrate
-            sudo docker compose -f docker-compose.yml exec backend python manage.py collectstatic
-            sudo docker compose -f docker-compose.yml exec backend cp -r /app/static/. /app/backend_static/static/
-            sudo docker compose -f docker-compose.yml exec backend python manage.py load_tags
-            sudo docker compose -f docker-compose.yml exec backend python manage.py load_ingredients_json
+    - name: Получение исходного кода из репозитория
+      uses: actions/checkout@v3
+    - name: Копируем docker-compose.yml на продакшен-сервер
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USER }}
+        key: ${{ secrets.SSH_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        source: "./infra/docker-compose.yml"
+        target: "foodgram"
+    - name: Выполнение удаленных ssh-команд для развертывания
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USER }}
+        key: ${{ secrets.SSH_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        script: |
+          sudo docker compose -f docker-compose.yml pull
+          sudo docker compose -f docker-compose.yml down
+          sudo docker compose -f docker-compose.yml up -d
+          sudo docker compose -f docker-compose.yml exec backend python manage.py migrate
+          sudo docker compose -f docker-compose.yml exec backend python manage.py collectstatic
+          sudo docker compose -f docker-compose.yml exec backend cp -r /app/static/. /app/backend_static/static/
+          sudo docker compose -f docker-compose.yml exec backend python manage.py load_tags
+          sudo docker compose -f docker-compose.yml exec backend python manage.py load_ingredients_json
   send_message:
     if: ${{ github.ref == 'refs/heads/main' }}
     name: Отправка сообщения в Телеграм
