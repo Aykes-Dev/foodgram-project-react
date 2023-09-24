@@ -63,8 +63,8 @@ jobs:
         username: ${{ secrets.USER }}
         key: ${{ secrets.SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        source: "./data/"
-        target: "data"
+        source: "./docs/"
+        target: "docs"
     - name: Выполнение удаленных ssh-команд для развертывания
       uses: appleboy/ssh-action@master
       with:
