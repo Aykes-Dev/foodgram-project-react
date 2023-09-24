@@ -42,23 +42,22 @@ class CookingTimeFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         if not (queryset := model_admin.get_queryset(request)):
-            yield ()
+            return ()
         min_value, max_value = queryset.aggregate(
             Min("cooking_time"),
             Max("cooking_time")).values()
         if (step := (max_value - min_value) // 3) == 0:
-            yield ()
+            return ()
         first_threshold = min_value + step
         secound_threshold = min_value + step * 2
-
-        yield ((min_value, first_threshold - 1), (
-            f'Быстрое, до {first_threshold - 1} минут'))
-        if queryset.filter(cooking_time__range=[
-                first_threshold, secound_threshold - 1]).exists():
-            yield ((first_threshold, secound_threshold - 1), (
-                f'Среднее {first_threshold}-{secound_threshold - 1} минут'))
-        yield ((secound_threshold, max_value), (
-            f'Медленное, больше {secound_threshold} минут'))
+        return (
+            ((min_value, first_threshold - 1), (
+                f'Быстрое, до {first_threshold - 1} минут')),
+            ((first_threshold, secound_threshold - 1), (
+                f'Среднее {first_threshold}-{secound_threshold - 1} минут')),
+            ((secound_threshold, max_value), (
+                f'Медленное, больше {secound_threshold} минут')),
+        )
 
     def queryset(self, _, queryset):
         if self.value():
