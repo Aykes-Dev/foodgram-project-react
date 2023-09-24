@@ -24,6 +24,7 @@ services:
     volumes:
       - static:/app/backend_static
       - media:/app/media
+      - ../docs/:../data
   nginx:
     image: nginx:1.19.3
     depends_on:
