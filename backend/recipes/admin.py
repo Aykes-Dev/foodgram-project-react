@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.contrib.auth.admin import Group
+from django.contrib.auth.admin import Group, UserAdmin
 from django.db.models import Max, Min
 from django.utils.html import format_html
 
@@ -124,7 +124,7 @@ class ShoppingListAdmin(admin.ModelAdmin):
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class UsersAdmin(UserAdmin):
     list_display = (
         'username', 'email', 'get_full_name', 'get_count_recipe',
         'get_subscribers', 'get_subscriptions', 'is_staff')

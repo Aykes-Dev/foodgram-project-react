@@ -61,7 +61,7 @@ class FollowSerializator(serializers.ModelSerializer):
         recipes_limit = self.context.get('recipes_limit')
         if recipes_limit:
             recipes_limit = int(recipes_limit)
-        author_recipes = object.recipes.all()[:recipes_limit]
+        author_recipes = source.recipes.all()[:recipes_limit]
         return RecipeForFollowwerSerializer(
             author_recipes, many=True
         ).data
