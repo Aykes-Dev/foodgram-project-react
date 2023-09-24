@@ -56,15 +56,6 @@ jobs:
       - build_and_push_to_docker_hub
       - build_frontend_and_push_to_docker_hub
     steps:
-    - name: Копируем docker-compose.yml на продакшен-сервер
-      uses: appleboy/scp-action@master
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USER }}
-        key: ${{ secrets.SSH_KEY }}
-        passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        source: "docs/"
-        target: "docs"
     - name: Выполнение удаленных ssh-команд для развертывания
       uses: appleboy/ssh-action@master
       with:
