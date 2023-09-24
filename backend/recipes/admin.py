@@ -41,26 +41,29 @@ class CookingTimeFilter(admin.SimpleListFilter):
     parameter_name = 'cooking_time'
 
     def lookups(self, request, model_admin):
-        min_value, max_value = model_admin.get_queryset(request).aggregate(
+        if not (queryset := model_admin.get_queryset(request)):
+            return ()
+        min_value, max_value = queryset.aggregate(
             Min("cooking_time"),
             Max("cooking_time")).values()
-        first_threshold = int((max_value - min_value) * 0.33)
-        secound_threshold = first_threshold * 2
-        return (
-            ((min_value, first_threshold - 1), ('Быстрое {}-{} минут'.format(
-                min_value, first_threshold
-            ))),
-            ((first_threshold, secound_threshold - 1), (
-                'Среднее {}-{} минут'.format(
-                    first_threshold, secound_threshold))),
-            ((secound_threshold, max_value), (
-                'Медленное {}-{} минут'.format(
-                    secound_threshold, max_value))),
-        )
+        if (step := (max_value - min_value) // 3) == 0:
+            return ()
+        first_threshold = min_value + step
+        secound_threshold = min_value + step * 2
+
+        yield ((min_value, first_threshold - 1), (
+            f'Быстрое, до {first_threshold - 1} минут'))
+        if queryset.filter(cooking_time__range=[
+                first_threshold, secound_threshold - 1]).exists():
+            yield ((first_threshold, secound_threshold - 1), (
+                f'Среднее {first_threshold}-{secound_threshold - 1} минут'))
+        yield ((secound_threshold, max_value), (
+            f'Медленное, больше {secound_threshold} минут'))
 
     def queryset(self, _, queryset):
         if self.value():
-            return queryset.filter(cooking_time__range=[*eval(self.value())])
+            return queryset.filter(cooking_time__range=eval(self.value()))
+        return queryset
 
 
 @admin.register(Recipe)
