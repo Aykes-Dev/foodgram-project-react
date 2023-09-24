@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import Group
+from django.db.models import Max, Min
 from django.utils.html import format_html
 
 from recipes.models import (
@@ -35,12 +36,50 @@ class IngredientInline(admin.TabularInline):
     min_num = 1
 
 
+class CookingTimeFilter(admin.SimpleListFilter):
+    title = ('Скорость приготовления')
+    parameter_name = 'cooking_time'
+
+    def get_value(self, queryset):
+        min_value, max_value = queryset.aggregate(
+            Min("cooking_time"),
+            Max("cooking_time")).values()
+        porog = int((max_value - min_value) * 0.33)
+        return min_value, porog, porog * 2, max_value
+
+    def lookups(self, request, model_admin):
+        qu = model_admin.get_queryset(request)
+        min_value, first_porog, secound_porog, max_value = self.get_value(qu)
+        return (
+            ('fast', ('Быстрое {}-{} минут'.format(
+                min_value, first_porog))),
+            ('middle', ('Среднее {}-{} минут'.format(
+                first_porog, secound_porog))),
+            ('slow', ('Медленное {}-{} минут'.format(
+                secound_porog, max_value))),
+        )
+
+    def queryset(self, _, queryset):
+        min_value, first_porog, secound_porog, max_value = self.get_value(
+            queryset)
+        if self.value() == 'fast':
+            return queryset.filter(
+                cooking_time__range=[min_value, first_porog])
+        if self.value() == 'middle':
+            return queryset.filter(
+                cooking_time__range=[first_porog + 1, secound_porog])
+        if self.value() == 'slow':
+            return queryset.filter(
+                cooking_time__range=[secound_porog + 1, max_value])
+        return queryset
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'get_count_in_favorite', 'author', 'get_image', 'get_tags',
         'get_ingredients')
-    list_filter = ('tags', )
+    list_filter = ('tags', CookingTimeFilter,)
     search_fields = ('author__username', 'name', 'tags__name')
     inlines = (IngredientInline,)
 
