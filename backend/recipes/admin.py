@@ -40,38 +40,27 @@ class CookingTimeFilter(admin.SimpleListFilter):
     title = ('Скорость приготовления')
     parameter_name = 'cooking_time'
 
-    def get_value(self, queryset):
-        min_value, max_value = queryset.aggregate(
+    def lookups(self, request, model_admin):
+        min_value, max_value = model_admin.get_queryset(request).aggregate(
             Min("cooking_time"),
             Max("cooking_time")).values()
-        porog = int((max_value - min_value) * 0.33)
-        return min_value, porog, porog * 2, max_value
-
-    def lookups(self, request, model_admin):
-        qu = model_admin.get_queryset(request)
-        min_value, first_porog, secound_porog, max_value = self.get_value(qu)
+        first_threshold = int((max_value - min_value) * 0.33)
+        secound_threshold = first_threshold * 2
         return (
-            ('fast', ('Быстрое {}-{} минут'.format(
-                min_value, first_porog))),
-            ('middle', ('Среднее {}-{} минут'.format(
-                first_porog, secound_porog))),
-            ('slow', ('Медленное {}-{} минут'.format(
-                secound_porog, max_value))),
+            ((min_value, first_threshold - 1), ('Быстрое {}-{} минут'.format(
+                min_value, first_threshold
+            ))),
+            ((first_threshold, secound_threshold - 1), (
+                'Среднее {}-{} минут'.format(
+                    first_threshold, secound_threshold))),
+            ((secound_threshold, max_value), (
+                'Медленное {}-{} минут'.format(
+                    secound_threshold, max_value))),
         )
 
     def queryset(self, _, queryset):
-        min_value, first_porog, secound_porog, max_value = self.get_value(
-            queryset)
-        if self.value() == 'fast':
-            return queryset.filter(
-                cooking_time__range=[min_value, first_porog])
-        if self.value() == 'middle':
-            return queryset.filter(
-                cooking_time__range=[first_porog + 1, secound_porog])
-        if self.value() == 'slow':
-            return queryset.filter(
-                cooking_time__range=[secound_porog + 1, max_value])
-        return queryset
+        if self.value():
+            return queryset.filter(cooking_time__range=[*eval(self.value())])
 
 
 @admin.register(Recipe)
