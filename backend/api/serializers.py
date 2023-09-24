@@ -58,13 +58,11 @@ class FollowSerializator(serializers.ModelSerializer):
             user=source.user, following=source.following).exists()
 
     def get_recipes(self, source):
-        recipes_limit = self.context.get('recipes_limit')
+        recipes_limit = self.context.get('request').GET.get('recipes_limit')
+        recipes = Recipe.objects.filter(author=source.following)
         if recipes_limit:
-            recipes_limit = int(recipes_limit)
-        author_recipes = source.following.recipes.all()[:recipes_limit]
-        return RecipeForFollowwerSerializer(
-            author_recipes, many=True
-        ).data
+            recipes = recipes[:int(recipes_limit)]
+        return RecipeForFollowwerSerializer(recipes, many=True).data
 
 
 class RecipeForFollowwerSerializer(serializers.ModelSerializer):

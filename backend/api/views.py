@@ -38,7 +38,10 @@ class UserViewSet(UserViewSet):
         return self.get_paginated_response(
             FollowSerializator(
                 self.paginate_queryset(
-                    request.user.follower.all()), many=True
+                    request.user.follower.all()),
+                context={
+                    'request': request,
+                }, many=True
             ).data)
 
     @action(
