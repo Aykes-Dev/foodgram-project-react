@@ -147,9 +147,11 @@ class Recipe(models.Model):
     text = models.TextField('Описание')
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления', validators=[MinValueValidator(1)])
+    pub_date = models.DateTimeField(
+        auto_now_add=True, db_index=True, verbose_name='Дата публикации')
 
     class Meta:
-        ordering = ('name', )
+        ordering = ('-pub_date',)
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
         default_related_name = 'recipes'
